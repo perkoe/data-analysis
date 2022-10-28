@@ -1,0 +1,273 @@
+---
+title: "ProjektR"
+author: "Ema Perkovic"
+date: "05/05/2022"
+output: html_document
+---
+```{r load-packages, include = F}
+library(tidyverse)
+library(ggplot2)
+library(viridis)
+library(ggcorrplot)
+library(esquisse)
+
+StudentsPerformance <- read_csv("C:/Users/Ema/Desktop/StudentsPerformance.csv")
+StudentsPerformance<-rename(StudentsPerformance,Math_Score=`math score` )
+```
+
+# Uvod
+
+Motivacija tega projekta je pridobiti več informacij o vplivu ozadja staršev, priprav na izpite in drugih dejavnikov na uspešnost učencev s pomočjo nabora podatkov, ki ima 1 000 vrstic in 8 stolpcev. Katere vse značilnosti imajo odločilno vlogo pri vplivu na učenčevo uspešnost.
+
+# Predstavitev in prezentacija podatkov
+
+Podatki uporabljeni pri tej analizi so bili pridobljeni s spletne strani <a href="https://www.kaggle.com/code/suchitakumari/student-performance-analysis">Kaggle.com</a>.
+Podatki so bili zbrani v srednjih šolah v Združenih državah Amerike v letu 2019.5 stolpcev je kategoričnih in 3 stolpci so številčne spremenljivke. 
+Podatki so sestavljeni iz 1000 učencev in 8 stolpcev: 
+
+  - 1.spol                           
+  - 2.rasa/etnična pripadnost        
+  - 3.stopnja izobrazbe staršev  
+  - 4.kosilo                         
+  - 5.priprave na izpit              
+  - 6.matematični rezultat
+  - 7.rezultat pri branju
+  - 8.rezultat pri pisanju
+
+Pri podatkih tipa kot so matematični rezultat,rezultat pri branju in pisanju sem uporabila naslednjo ocenjavalno lestvico:
+
+  - A:100%-91%
+  - B:90%-81%
+  - C:80%-71%
+  - D:70%-61%
+  - E:60%-50%
+  - F:>50%
+
+# Analiza podatkov
+
+Pri analizi podatkov se bom usmerila na vprašanja in jih s pomočjo grafov odgovorila. Prva dva vprašanja bosta vezana na splošno čez vse podatke, da bralec dobi smisel, kako se podatki med seboj obnašajo. Potem pa še sledijo štirje grafi, ki so usmerjeni na rezultate iz matematike.
+
+
+
+### Ali en spol prekaša drugega v vseh rezultatih?
+
+```{r,echo=FALSE}
+
+z <- StudentsPerformance %>%
+  mutate(percent = (Math_Score + `reading score`+`writing score`)/3) 
+
+b<-z %>% 
+  group_by(gender) %>% 
+  summarise(avg = round(mean(percent),1))
+
+
+a6<-ggplot(b, aes(x = "", y = avg, fill = gender)) +
+  geom_col(color = "white") +
+  geom_text(aes(label = avg),
+            position = position_stack(vjust = 0.5)) +
+  coord_polar(theta = "y") +
+  scale_fill_manual(name="Spol",values = c("mistyrose1", "paleturquoise2"))+
+  theme_void()
+a6
+
+```
+
+
+Za odgovor na to vprašanje se izračuna povprečje vseh treh rezultatov (matematični rezultat + bralni rezultat + pisni rezultat), rezultati pa se prikažejo s tortnim diagramom. Iz grafa je razvidno, da imajo ženske višji povprečni rezultat kot moški.
+
+
+
+
+
+
+
+### Ali imajo podatki kakršno koli korelacijo
+
+```{r,echo=FALSE}
+StudentsPerformance$`race`<- as.numeric(factor(StudentsPerformance$`race/ethnicity`))
+StudentsPerformance$`Parents education` <-as.numeric(factor(StudentsPerformance$`parental level of education`,levels=
+                                                              c('some high school','high school',"associate's degree",'some college',"bachelor's degree", "master's degree") ))
+StudentsPerformance$Lunch <- as.numeric(factor(StudentsPerformance$lunch, levels=c("standard",'free/reduced')))
+StudentsPerformance$`Test preparation` <- as.numeric(factor(StudentsPerformance$`test preparation course`, levels =c('none','completed') ))
+
+
+df <-select_if(StudentsPerformance, is.numeric)
+corr <- round(cor(df), 1)
+
+ggcorrplot(corr,hc.order = TRUE, type = "upper", ggtheme = ggplot2::theme_light,
+           colors = c("#222866", "white", "#9F446C"),outline.col = "white",tl.cex = 12, tl.col = "black", tl.srt = 45)
+```
+
+
+Med rezultati branja, pisanja in matematike obstajajo močne pozitivne korelacije.Iz diagrama je jasno videti, da imata najmočnejo korelacijo pisalni in bralni rezultat. Kosilo, rasa ter priprava na izpit imajo korelacijo enako 0. Kosilo bolj vpliva na matematične rezultate kot pa na bralne in pisalne. Na drugi strani pa na pisalne rezultate bolj vpliva priprava na izpit, kot pa na matematične in bralne. Rasa ima večjo prisotnost pri matematičnih in pisalnih rezultatih kot pa pri bralnih. Izobrazba staršev pa na vse tri vpliva enakomerno ter tudi na skupino rase.
+
+
+
+
+
+
+
+### Ali se učenci s standardnim kosilom bolje izkažejo pri matematičnih rezultatih?
+
+
+```{r, echo=FALSE}
+ggplot(StudentsPerformance) +
+  aes(x = lunch, y = Math_Score, fill = lunch) +
+  geom_boxplot() +
+  scale_fill_brewer(palette = "YlOrRd", direction = 1) +
+  labs(
+    x = "Kosilo",
+    y = "Rezultat pri matematiki",
+    fill = "Kosilo"
+  ) +
+  theme_minimal()
+```
+
+
+Jasno je, da imajo učenci s standardnim kosilom boljše ocene.
+
+
+
+
+
+
+### Ali priprava na izpit vpliva na rezultate pri matematiki?
+
+
+```{r,echo=FALSE}
+ggplot(StudentsPerformance) +
+  aes(
+    x = `test preparation course`,
+    y = Math_Score,
+    fill = `test preparation course`
+  ) +
+  geom_boxplot() +
+  scale_fill_brewer(palette = "Set3", direction = 1) +
+  labs(
+    x = "Priprava na izpit",
+    y = "Kosilo",
+    fill = "Priprava na izpit"
+  ) +
+  theme_minimal()
+```
+
+
+Da,kot predvideno so se učenci, ki so se na izpit pripravljali, na koncu boljše izkazali.
+
+
+
+
+
+### Ali je posamezna rasa boljša od ostalih v matematiki?
+```{r,echo=FALSE}
+h<-StudentsPerformance
+h<-rename(h,RACE_ET=`race/ethnicity`)
+joinPrimer<-h %>%
+  group_by(RACE_ET) %>%
+  summarize(Povprecje=mean(Math_Score),n=n())
+
+df<-h %>%
+  inner_join(joinPrimer,c("RACE_ET"="RACE_ET")) %>%
+  select(RACE_ET, Math_Score, Povprecje, n) 
+ggplot(df) +
+  aes(x = RACE_ET, y = Povprecje) +
+  geom_boxplot(fill = "#6B90D2") +
+  labs(
+    x = "Rasna skupina",
+    y = "Povprecje",
+    title = "Povprecje v matematiki v vsaki rasni skupini"
+  ) +
+  theme_minimal()
+
+```
+
+
+
+
+
+
+```{r,echo=FALSE}
+ocenaMat<-cut(StudentsPerformance$Math_Score, breaks=c(-Inf,50,61,71,81,91,100), labels = c("F","E","D","C","B","A"))
+ocenaMat<-factor(ocenaMat,levels=rev(levels(ocenaMat)))
+StudentsPerformance$Math_Score<-ocenaMat
+StudentsPerformance$`race/ethnicity` <- as.factor(StudentsPerformance$`race/ethnicity`)
+
+ggplot(StudentsPerformance, mapping=aes(x = ocenaMat, fill=`race/ethnicity`)) + 
+  geom_bar() +
+  scale_y_continuous(limits=c(0,300),breaks = seq(0,500,50))+
+  labs(y = "Stevilo učencev",
+       x= "Ocena pri matematiki",
+       title = "Ali različne rase dosegajo razlicne rezultate pri matematiki?")+
+     scale_fill_brewer(name="Rasne skupine",palette = "Accent")+
+  theme_light()
+
+```
+
+Iz obeh grafov ugotovimo, da to drži in da rasna grupa E dosega največjo oceno, ki pa je A. Na to vprašanje je odgovorjeno z uporabo prvega grafa in sicer z vizualizacijo s stolpčnim diagramom. V drugem grafu vdimo da v primerjavi z vsemi drugimi rasami in etničnimi skupinami, se etnična skupina E dobro odreže. Učenci skupine A imajo najnižji rezultat med vsemi etničnimi skupinami, kar pomeni, da ena rasa prekaša druge. Prav tako skupina D prekaša skupino C.
+
+
+
+
+
+
+
+
+### Ali vpliva izobrazba staršev na ocene učencev pri matematiki?
+
+```{r,echo=FALSE}
+starsi <- ordered(StudentsPerformance$`parental level of education`, levels = c("some high school", "high school", "some college", "associate's degree", "bachelor's degree", "master's degree"))
+mathScore_vs_starsi <- ggplot(StudentsPerformance, aes(y = starsi, fill = Math_Score)) +
+  geom_bar(position = "dodge") +
+  xlab("Rezultat otrok pri matematiki") +
+  ylab("Raven izobrazbe")+
+  scale_fill_viridis(name="Ocena",discrete = T) +
+  theme_light()
+
+mathScore_vs_starsi
+
+
+```
+
+
+Vključenost staršev v otrokovo izobraževanje je  pozitivno povezana z otrokovo učno uspešnostjo. Iz tega grafa je razvidno, da imajo višje tri stopnje izobrazbe staršev (magistrska, dodiplomska in izredna) običajno večji delež učencev z A,B in C v primerjavi z nižjimi tremi stopnjami (nekaj višja šola, srednja šola in nekaj srednja šola).
+
+
+
+
+
+
+# Zaključek
+
+Iz analize smo ugotovili da imajo Rasna/etnična pripadnost, izobrazba staršev, vrsta kosila in tečaj za pripravo na preverjanje znanja  določen vpliv na uspešnost učenca. Učenci skupine E so pri vseh predmetih dosegli najboljše rezultate, sledijo jim učenci skupin D, C, B in A v tem vrstnem redu.
+Zdi se, da je magisterij staršev pozitivno vplival na splošni študij njihovih otrok. Starši s samo srednješolsko izobrazbo svojih otrok, razen redkih izjem, niso znali dobro usmerjati, zato so pri vseh predmetih dosegli najnižje rezultate.
+Standardno kosilo ima velik pozitiven vpliv na študij.
+
+
+
+# Reference
+
+[1] R graph gallery, <a href="https://www.r-graph-gallery.com/ggplot2-package.html">https://www.r-graph-gallery.com/ggplot2-package.html</a>
+
+[2] R statistics, <a href="http://r-statistics.co/Top50-Ggplot2-Visualizations-MasterList-R-Code.html">http://r-statistics.co/Top50-Ggplot2-Visualizations-MasterList-R-Code.html</a>
+
+[3] r4stats.com, <a href="http://r4stats.com/examples/graphics-ggplot2/">http://r4stats.com/examples/graphics-ggplot2/"</a>
+
+[4] kaggle.com, <a href="https://www.kaggle.com/datasets/spscientist/students-performance-in-exams">https://www.kaggle.com/datasets/spscientist/students-performance-in-exams</a>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
